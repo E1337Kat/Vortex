@@ -15,7 +15,7 @@ import { nexusGameId } from './util/convertGameId';
 import sendEndorseMod from './util/endorseMod';
 import { TimeoutError } from './util/submitFeedback';
 import transformUserInfo from './util/transformUserInfo';
-import { gameById } from '../gamemode_management/selectors';
+import { gameById, currentGame } from '../gamemode_management/selectors';
 
 const UPDATE_CHECK_DELAY = 60 * 60 * 1000;
 
@@ -31,7 +31,11 @@ export function startDownload(api: IExtensionApi, nexus: Nexus, nxmurl: string):
   let nexusModInfo: IModInfo;
   let nexusFileInfo: IFileInfo;
 
-  const gameId = nexusGameId(gameById(api.store.getState(), url.gameId.toLowerCase()));
+  const state = api.store.getState();
+  const activeGame = currentGame(state);
+  const gameId = activeGame !== undefined && activeGame.id !== url.gameId 
+    ? nexusGameId(gameById(state, activeGame.id.toLowerCase()))
+    : nexusGameId(gameById(state, url.gameId.toLowerCase()))
 
   return Promise.resolve(nexus.getModInfo(url.modId, gameId))
     .then((modInfo: IModInfo) => {

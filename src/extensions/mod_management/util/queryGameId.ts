@@ -2,7 +2,8 @@ import { showDialog } from '../../../actions';
 import { ThunkStore } from '../../../types/IExtensionContext';
 import { IState } from '../../../types/IState';
 import { UserCanceled } from '../../../util/CustomErrors';
-import { activeGameId, gameName } from '../../../util/selectors';
+import { gameName, currentGame } from '../../../util/selectors';
+import { nexusGameId } from '../../nexus_integration/util/convertGameId';
 
 import * as Promise from 'bluebird';
 
@@ -12,7 +13,8 @@ import * as Promise from 'bluebird';
  */
 function queryGameId(store: ThunkStore<any>, downloadGameIds: string[]): Promise<string> {
   const state: IState = store.getState();
-  const gameMode = activeGameId(state);
+  const activeGame = currentGame(state);
+  const gameMode = nexusGameId(activeGame);
 
   if (!Array.isArray(downloadGameIds)) {
     downloadGameIds = [ downloadGameIds ];

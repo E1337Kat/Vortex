@@ -29,7 +29,7 @@ import * as Promise from 'bluebird';
 import * as path from 'path';
 import getNormalizeFunc, { Normalize } from '../../util/getNormalizeFunc';
 import queryGameId from './util/queryGameId';
-import { downloadPathForGame } from '../../util/selectors';
+import { downloadPathForGame, currentGame } from '../../util/selectors';
 
 export function onGameModeActivated(
     api: IExtensionApi, activators: IDeploymentMethod[], newGame: string) {
@@ -311,7 +311,7 @@ export function onStartInstallDownload(api: IExtensionApi,
   return queryGameId(api.store, download.game)
     .then(gameId => {
       if (!truthy(download.localPath)) {
-        api.events.emit('refresh-downloads', gameId, () => {
+        api.events.emit('refresh-downloads',  gameId, () => {
           api.showErrorNotification('Download invalid',
             'Sorry, the meta data for this download is incomplete. Vortex has '
             + 'tried to refresh it, please try again.',
@@ -330,8 +330,20 @@ export function onStartInstallDownload(api: IExtensionApi,
         return;
       }
       const fullPath: string = path.join(downloadPath, download.localPath);
+
+      // Check if we need to convert the gameid.
+      //  this is used when two separate game id's are mapped against
+      //  the same nexus page id. (Currently only NWN: OE and NWN: EE)
+      let forcedId = undefined;
+      const activeGame = currentGame(state);
+      if (activeGame !== undefined 
+        && activeGame.details !== undefined 
+        && activeGame.details.nexusPageId !== undefined) {
+          forcedId = activeGame.id;
+        }
+
       installManager.install(downloadId, fullPath, download.game, api,
-        { download }, true, false, callback, gameId);
+        { download }, true, false, callback, forcedId !== undefined ? forcedId : gameId);
     })
     .catch(err => {
       if (callback !== undefined) {
