@@ -59,7 +59,7 @@ import {} from './views/ExternalChangeDialog';
 import {} from './views/ModList';
 import {} from './views/Settings';
 
-import { onAddMod, onGameModeActivated, onPathsChanged,
+import { onAddMod, onGameModeActivated, onPathsChanged, onActivatorChanged,
          onRemoveMod, onStartInstallDownload, onModsChanged } from './eventHandlers';
 import InstallManager from './InstallManager';
 import deployMods from './modActivation';
@@ -709,6 +709,10 @@ function once(api: IExtensionApi) {
   api.onStateChange(
       ['settings', 'mods', 'installPath'],
       (previous, current) => onPathsChanged(api, previous, current));
+
+  api.onStateChange(
+    ['settings', 'mods', 'activator'],
+    (previous, current) => onActivatorChanged(api, activators, previous, current ));
 
   api.onStateChange(
       ['persistent', 'mods'],

@@ -137,6 +137,79 @@ export function onPathsChanged(api: IExtensionApi,
   }
 }
 
+export function onActivatorChanged(api: IExtensionApi,
+                                  activators: IDeploymentMethod[],
+                                  previous: { [gameId: string]: string },
+                                  current: { [gameId: string]: string }) {
+  const { store } = api;
+  const state: IState = store.getState();
+  const gameId = activeGameId(state);
+
+  // Ensure we actually have a change.
+  if (previous[gameId] === current[gameId]) {
+    return null;
+  }
+
+  const discovery = state.settings.gameMode.discovered[gameId];
+  if ((discovery === undefined) || (discovery.path === undefined)) {
+    return null;
+  }
+
+  const installationPath = installPathForGame(state, gameId);
+  const game = getGame(gameId);
+  const modPaths = game.getModPaths(discovery.path);
+  const modTypes = Object.keys(modPaths);
+
+  const activator: IDeploymentMethod = current[gameId] !== undefined
+    ? activators.find(act => act.id === current[gameId])
+    : activators.find(act => allTypesSupported(act, state, gameId, modTypes) === undefined);
+
+  if (activator === undefined) {
+    return Promise.reject(new ProcessCanceled('No deployment method active'));
+  }
+  
+  let profileId: string;
+  const lastActive = getSafe(state,
+    ['settings', 'profiles', 'lastActiveProfile', gameId], undefined);
+  if (lastActive !== undefined) {
+    profileId = (typeof(lastActive) === 'string')
+      ? lastActive
+      : lastActive.profileId;
+  }
+
+  const profile: IProfile = getSafe(state, ['persistent', 'profiles', profileId], undefined);
+  const isModEnabled = modId => {
+    return getSafe(profile, ['modState', modId, 'enabled'], false);
+  }
+
+  const knownMods: { [modId: string]: IMod } = getSafe(state, ['persistent', 'mods', gameId], {});
+  const enabledMods = Object.keys(knownMods).filter(isModEnabled);
+
+  // Ensure we only look at modTypes we have enabled.
+  const isValidType = type => {
+    return enabledMods.find(modId => knownMods[modId].type === type) !== undefined ? true : false;
+  }
+
+  const types = modTypes.filter(isValidType);
+  types.forEach(type => {
+    const dataPath = modPaths[type];
+    let normalized: Normalize;
+    getNormalizeFunc(dataPath).then(norm => {
+      normalized = norm;
+      return loadActivation(api, type, dataPath);
+    })
+    .then(lastActivation => activator.prepare(dataPath, true, lastActivation, normalized))
+    .then(() => {
+      return activator.finalize(gameId, dataPath, installationPath);
+    })
+    .then(newActivation => {
+      return saveActivation(type, state.app.instanceId, dataPath, newActivation);
+    })
+    .then(() => store.dispatch(setDeploymentNecessary(gameId, true)))
+    .catch(err => null);
+  })
+}
+
 export function onModsChanged(api: IExtensionApi, previous: IModTable, current: IModTable) {
   const { store } = api;
   const state: IState = store.getState();
