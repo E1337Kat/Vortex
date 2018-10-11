@@ -12,12 +12,14 @@ export function getModTypeExtensions(): IModType[] {
 export function registerModType(id: string, priority: number,
                                 isSupported: (gameId: string) => boolean,
                                 getPath: (game: IGame) => string,
-                                test: (instructions: IInstruction[]) => Promise<boolean>) {
+                                test: (instructions: IInstruction[]) => Promise<boolean>,
+                                interceptInstructions: (gameId: string, instructions: IInstruction[]) => IInstruction[]) {
   modTypeExtensions.push({
     typeId: id,
     priority,
     isSupported,
     getPath,
     test,
+    interceptInstructions,
   });
 }

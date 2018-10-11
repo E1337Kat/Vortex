@@ -839,12 +839,16 @@ export interface IExtensionContext {
    *                                          where games of this type should be installed.
    * @param {(instructions) => Promise<boolean>} test given the list of install instructions,
    *                                                  determine if the installed mod is of this type
+   * @param {(gameId, instructions) => IInstruction[]} interceptInstructions specify an optional interception callback which
+   *                                                     allows a modType extension to view and modify the installation
+   *                                                     instructions before mod installation.
    */
   registerModType: (id: string,
                     priority: number,
                     isSupported: (gameId: string) => boolean,
                     getPath: (game: IGame) => string,
-                    test: (installInstructions: IInstruction[]) => Promise<boolean>) => void;
+                    test: (installInstructions: IInstruction[]) => Promise<boolean>,
+                    interceptInstructions: (gameId: string, instructions: IInstruction[]) => IInstruction[]) => void;
 
   /**
    * register an action sanity check

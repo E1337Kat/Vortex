@@ -9,4 +9,5 @@ export interface IModType {
   isSupported: (gameId: string) => boolean;
   getPath: (game: IGame) => string;
   test: (installInstructions: IInstruction[]) => Promise<boolean>;
+  interceptInstructions: (gameId: string, instructions: IInstruction[]) => IInstruction[];
 }

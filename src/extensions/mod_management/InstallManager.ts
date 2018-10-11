@@ -595,7 +595,7 @@ class InstallManager {
                                  gameId, undefined)
           .then((resultInner) => this.processInstructions(
             api, mod.path, tempPath, destinationPath,
-            gameId, mod.key, resultInner))
+            gameId, mod.key, resultInner, mod.submoduleType))
           .then(() => {
             if (mod.submoduleType !== undefined) {
               api.store.dispatch(setModType(gameId, modId, mod.submoduleType));
@@ -660,7 +660,8 @@ class InstallManager {
   private processInstructions(api: IExtensionApi, archivePath: string,
                               tempPath: string, destinationPath: string,
                               gameId: string, modId: string,
-                              result: { instructions: IInstruction[] }) {
+                              result: { instructions: IInstruction[] },
+                              modType?: string) {
     if (result.instructions === null) {
       // this is the signal that the installer has already reported what went
       // wrong. Not necessarily a "user canceled" but the error handling happened
@@ -673,7 +674,16 @@ class InstallManager {
       return Promise.reject(new ProcessCanceled('Empty archive or no options selected'));
     }
 
-    const instructionGroups = this.transformInstructions(result.instructions);
+    let instructions = result.instructions;
+    if (modType !== undefined) {
+      const modTypes: IModType[] = getGame(gameId).modTypes;
+      const modTypeInst = modTypes.find(type => type.typeId === modType);
+      instructions = (modTypeInst !== undefined && modTypeInst.interceptInstructions !== undefined) 
+        ? modTypeInst.interceptInstructions(gameId, instructions) 
+        : instructions;
+    }
+    
+    const instructionGroups = this.transformInstructions(instructions);
 
     if (instructionGroups.error.length > 0) {
       api.showErrorNotification('Installer reported errors',
